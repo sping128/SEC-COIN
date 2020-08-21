@@ -1,0 +1,4 @@
+{
+  "names" :  ["ERC20", "SafeMath", "StandardToken", "WhoCoin"],
+  "main"  : "WhoCoin"
+}

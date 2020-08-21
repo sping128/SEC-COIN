@@ -1,0 +1,86 @@
+const Web3 = require("web3");
+const web3 = new Web3(new Web3.providers.HttpProvider("https://tendermint-dev.sec.or.th/"));
+const BN = web3.utils.BN;
+const abi = require("../build/WhoCoin2.json").abi;
+const Common = require('ethereumjs-common');    // used to sign transaction
+const Tx = require('etheruemjs-tx').Transaction;    // used to sign transaction
+
+// Get main account #0
+async function getCurrentAccount() {
+    const currentAccounts = await web3.eth.getAccounts();
+    console.log("Unlocked account address: \t", currentAccounts[0]);
+    return currentAccounts[0];
+}
+
+// Get all accounts => array of account address
+async function getAccounts() {
+    return web3.eth.getAccounts()
+        .catch(err => console.error(err));
+}
+
+// Get ether balance
+// Parameter: account (address)
+async function getBalance(account) {
+    return web3.eth.getBalance(account)
+        .catch(err => console.error(err));
+}
+
+async function getTokenBalances(ci) {
+    const accounts = await getAccounts();
+    result = [];
+    for (let account of accounts) {
+        const balance = await getTokenBalance(ci, account);
+        result.push({ 'address': account, 'balance': balance });
+    }
+    return result;
+}
+
+async function getTokenBalance(ci, account) {
+    return ci.methods.balanceOf(account).call().catch(err => console.log(err));
+}
+
+// Get balances of all accounts
+async function getBalances() {
+    const accounts = await getAccounts();
+    result = [];
+    for (let account of accounts) {
+        const balance = await getBalance(account);
+        result.push({ 'address': account, 'balance': balance });
+    }
+    return result;
+}
+
+async function transferToken(ci, from, to, amount, fromPrivateKey) {
+    const encodedTx = ci.methods.transfer(to, amount).encodeABI();
+    const gas = await ci.methods.transfer(to, amount).estimateGas();
+    const privateKey = Buffer.from(fromPrivateKey, 'hex');
+    const nonce = await web3.eth.getTransactionCount(from); // # transactions เคยส่ง
+
+    // สร้าง transaction ดิบ ยังไม่มีการ sign
+    const rawTx = {
+        nonce: nonce,
+        from: from,
+        to: ci.options.address,  // ส่งไปหา contract address
+        data: encodedTx,
+        gas: new BN(gas).mul(new Number('1.5')) // BN (Big number) จ่าย gas เผื่อ 50%
+    }
+}
+
+
+async function run() {
+    const myAccount = '0x98b52Cbab029de03BABDc30d33020c65F9214cF0';
+    const myPrivateKey = '0F47870982A719BD44C95137C207C63AF6FE00042A2E4D5976570796EE3F8A61';
+    const tokenAddress = '0xf42035FfAbB32e9439cBea2B21F656Dbfad85F8A';
+    const balances = await getBalances();
+
+    // console.log(balances);
+    // console.log(abi);
+    const cInstance = new web3.eth.Contract(abi, tokenAddress);
+    const myTokenBalance = await getTokenBalances(cInstance, myAccount);
+    // console.log(myTokenBalance);
+    const allTokenBalances = await getTokenBalances(cInstance);
+
+    console.log(allTokenBalances)
+}
+
+run();
