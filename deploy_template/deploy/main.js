@@ -3,7 +3,7 @@ const web3 = new Web3(new Web3.providers.HttpProvider("https://tendermint-dev.se
 const BN = web3.utils.BN;
 const abi = require("../build/WhoCoin2.json").abi;
 const Common = require('ethereumjs-common');    // used to sign transaction
-const Tx = require('etheruemjs-tx').Transaction;    // used to sign transaction
+const Tx = require('ethereumjs-tx').Transaction;    // used to sign transaction
 
 // Get main account #0
 async function getCurrentAccount() {
@@ -54,7 +54,7 @@ async function transferToken(ci, from, to, amount, fromPrivateKey) {
     const encodedTx = ci.methods.transfer(to, amount).encodeABI();
     const gas = await ci.methods.transfer(to, amount).estimateGas();
     const privateKey = Buffer.from(fromPrivateKey, 'hex');
-    const nonce = await web3.eth.getTransactionCount(from); // # transactions เคยส่ง
+    const nonce = await web3.eth.getTransactionCount(from); // # transactions ที่เคยส่งจาก from
 
     // สร้าง transaction ดิบ ยังไม่มีการ sign
     const rawTx = {
@@ -62,25 +62,43 @@ async function transferToken(ci, from, to, amount, fromPrivateKey) {
         from: from,
         to: ci.options.address,  // ส่งไปหา contract address
         data: encodedTx,
-        gas: new BN(gas).mul(new Number('1.5')) // BN (Big number) จ่าย gas เผื่อ 50%
+        gas: new BN(gas).mul(new BN('1.5')) // BN (Big number) จ่าย gas เผื่อ 50%
     }
+
+    const customCommon = Common.default.forCustomChain(
+        'mainnet', {
+            name: 'localtestnet',
+            chainId: 8
+        },
+        'petersburg'
+    )
+    const tx = new Tx(rawTx, { common: customCommon } );
+    tx.sign(privateKey);
+    const serializedTx = tx.serialize();
+    return web3.eth.sendSignedTransaction('0x' + serializedTx.toString('hex'))
+        .on('transactionHash', txHash => console.log(txHash))
+        .catch(error => console.log(error));
 }
 
 
 async function run() {
     const myAccount = '0x98b52Cbab029de03BABDc30d33020c65F9214cF0';
-    const myPrivateKey = '0F47870982A719BD44C95137C207C63AF6FE00042A2E4D5976570796EE3F8A61';
+    const myPrivateKey = '1ABCF8E92DE2392ED04902677A0822A26F1F993AE359FCE7A5FA98725400B0C1';
     const tokenAddress = '0xf42035FfAbB32e9439cBea2B21F656Dbfad85F8A';
     const balances = await getBalances();
-
     // console.log(balances);
     // console.log(abi);
+
     const cInstance = new web3.eth.Contract(abi, tokenAddress);
+    // console.log(cInstance);
+    
     const myTokenBalance = await getTokenBalances(cInstance, myAccount);
     // console.log(myTokenBalance);
-    const allTokenBalances = await getTokenBalances(cInstance);
 
+    const allTokenBalances = await getTokenBalances(cInstance);
     console.log(allTokenBalances)
+
+    // const transferResult = await transferToken(cInstance, myAccount, '0x85a9E0Cc63481655a589a0D9EFCc5eb299647171', '22', myPrivateKey);
 }
 
 run();
