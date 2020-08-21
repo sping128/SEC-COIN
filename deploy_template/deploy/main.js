@@ -80,9 +80,39 @@ async function transferToken(ci, from, to, amount, fromPrivateKey) {
         .catch(error => console.log(error));
 }
 
+async function sendEther(ci, from, to, amount, fromPrivateKey) {
+    const privateKey = Buffer.from(fromPrivateKey, 'hex');
+    const nonce = await web3.eth.getTransactionCount(from); // # transactions ที่เคยส่งจาก from
+
+    // สร้าง transaction ดิบ ยังไม่มีการ sign
+    const rawTx = {
+        nonce: nonce,
+        from: from,
+        to: to,
+        value: amount
+    }
+
+    const gas = await web3.eth.estimateGas(rawTx);
+    rawTx['gas'] = new BN(gas).mul(new BN('1.5'));
+
+    const customCommon = Common.default.forCustomChain(
+        'mainnet', {
+            name: 'localtestnet',
+            chainId: 8
+        },
+        'petersburg'
+    )
+    const tx = new Tx(rawTx, { common: customCommon } );
+    tx.sign(privateKey);
+    const serializedTx = tx.serialize();
+    return web3.eth.sendSignedTransaction('0x' + serializedTx.toString('hex'))
+        .on('transactionHash', txHash => console.log(txHash))
+        .catch(error => console.log(error));   
+}
 
 async function run() {
     const myAccount = '0x98b52Cbab029de03BABDc30d33020c65F9214cF0';
+    const BallAccount = '0xC321420c15bcEd897A9AC68FD93c73D3AA3BBA9e'
     const myPrivateKey = '1ABCF8E92DE2392ED04902677A0822A26F1F993AE359FCE7A5FA98725400B0C1';
     const tokenAddress = '0xf42035FfAbB32e9439cBea2B21F656Dbfad85F8A';
     const balances = await getBalances();
@@ -98,7 +128,10 @@ async function run() {
     const allTokenBalances = await getTokenBalances(cInstance);
     console.log(allTokenBalances)
 
-    // const transferResult = await transferToken(cInstance, myAccount, '0x85a9E0Cc63481655a589a0D9EFCc5eb299647171', '22', myPrivateKey);
+    // const transferResult = await transferToken(cInstance, myAccount, BallAccount, '1000', myPrivateKey);
+
+    // const buyTokenResult = await sendEther(cInstance, myAccount, cInstance.options.address, web3.utils.toWei(new BN(15), 'ether'), myPrivateKey);
+    // console.log(buyTokenResult);
 }
 
 run();
