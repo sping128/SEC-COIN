@@ -112,10 +112,13 @@ async function sendEther(ci, from, to, amount, fromPrivateKey) {
 
 async function run() {
     const myAccount = '0x98b52Cbab029de03BABDc30d33020c65F9214cF0';
-    const BallAccount = '0xC321420c15bcEd897A9AC68FD93c73D3AA3BBA9e'
     const myPrivateKey = '1ABCF8E92DE2392ED04902677A0822A26F1F993AE359FCE7A5FA98725400B0C1';
+    
+    const BallAccount = '0xC321420c15bcEd897A9AC68FD93c73D3AA3BBA9e'
+    
     const tokenAddress = '0xf42035FfAbB32e9439cBea2B21F656Dbfad85F8A';
-    const balances = await getBalances();
+    
+    // const balances = await getBalances();
     // console.log(balances);
     // console.log(abi);
 
